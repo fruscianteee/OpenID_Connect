@@ -1,5 +1,5 @@
 [workspace]
-members = ["cli", "application", "authorization"]
+members = ["cli", "authorization"]
 [workspace.package]
 authors = ["megumsih <megumish@megumi.sh>"]
 categories = []
@@ -27,5 +27,7 @@ async-trait = "0.1"
 # assertion is more pretty
 pretty_assertions = "1.3"
 # tracing and logging library
+serde = { version = "1.0.163", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+anyhow = "1.0.71"
