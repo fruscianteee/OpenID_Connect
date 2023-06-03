@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Login Result{% endblock %}
+
+{% block content %}
+<h1>{{ result_msg }}</h1>
+
+<h2>User Details</h2>
+<p>User ID: {{ user.user_id }}</p>
+<p>User Code: {{ user.user_code }}</p>
+{% endblock %}

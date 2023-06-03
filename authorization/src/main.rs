@@ -1,7 +1,13 @@
+use std::env;
+
+use askama::Template;
+use askama_axum::IntoResponse;
+use axum::http::Response;
 use axum::routing::{get, post};
 use axum::Json;
 use axum::{extract::Form, response::Html, Router};
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 
 #[derive(Debug, Serialize, Default)]
 struct DeviceAuthorizationResponse {
@@ -21,10 +27,17 @@ struct DeviceAuthorizationRequest {
 
 #[tokio::main]
 async fn main() {
+    let log_level = env::var("RUST_LOG").unwrap_or("info".into());
+    env::set_var("RUST_LOG", log_level);
+    tracing_subscriber::fmt()
+        // .with_span_events(tracing_subscriber::fmt::format::FmtSpan::CLOSE)
+        // .compact()
+        .init();
     // build our application with a single route
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
-        .route("/device_authorization", post(accept_form));
+        .route("/device_authorization", post(accept_form))
+        .route("/device", get(login).post(submit));
 
     // run it with hyper on localhost:3000
     axum::Server::bind(&"127.0.0.1:3000".parse().unwrap())
@@ -33,6 +46,7 @@ async fn main() {
         .unwrap();
 }
 
+#[instrument(ret)]
 async fn accept_form(
     Form(input): Form<DeviceAuthorizationRequest>,
 ) -> Json<DeviceAuthorizationResponse> {
@@ -47,4 +61,34 @@ async fn accept_form(
         interval: 5,
     };
     axum::Json(body)
+}
+
+#[derive(Template, Debug, Default, Deserialize, Serialize)]
+#[template(path = "index.html")]
+struct LoginForm {
+    user_id: String,
+    password: String,
+    user_code: String,
+}
+#[instrument(ret)]
+async fn login() -> impl IntoResponse {
+    LoginForm::default()
+}
+
+#[derive(Template, Debug, Serialize)]
+#[template(path = "response.html")] // もしあなたが結果を表示するための別のテンプレートを持っているなら、そのパスを指定してください。
+struct LoginResponse {
+    result_msg: String,
+    user: LoginForm,
+}
+
+#[instrument(ret)]
+async fn submit(Form(input): Form<LoginForm>) -> impl IntoResponse {
+    dbg!(&input);
+    let hello = LoginResponse {
+        user: input,
+        result_msg: "認証OK !!!!!".to_owned(),
+    }; // instantiate your struct
+    println!("{}", hello.render().unwrap());
+    // axum::Json(body)
 }
