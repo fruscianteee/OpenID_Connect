@@ -1,51 +1,10 @@
 use anyhow::Result;
-use serde::Deserialize;
-use serde::Serialize;
-use std::collections::HashMap;
-
-#[derive(Debug, Deserialize)]
-struct DeviceAuthorizationResponse {
-    device_code: String,
-    user_code: String,
-    verification_uri: String,
-    verification_uri_complete: String,
-    expires_in: u32,
-    interval: u32,
-}
-
-#[derive(Debug, Serialize)]
-#[serde(tag = "grant_code")]
-enum AccessTokenRequest {
-    #[serde(rename = "urn:ietf:params:oauth:grant-type:device_code")]
-    DeviceCode {
-        device_code: String,
-        client_id: String,
-    },
-}
-
-#[derive(Debug, Deserialize)]
-struct AccessTokenResponse {
-    access_token: String,
-    token_type: String,
-    expires_in: Option<u32>,
-    refresh_token: Option<String>,
-    example_parameter: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct ErrorResponse {
-    error: ErrorResponseKind,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
-enum ErrorResponseKind {
-    AuthorizationPending,
-    SlowDown,
-    Others,
-}
-
-const DEVICE_FLOW_GRANT_TYPE: &'static str = "urn:ietf:params:oauth:grant-type:device_code";
+use authorization::res_req::AccessTokenRequest;
+use authorization::res_req::AccessTokenResponse;
+use authorization::res_req::DeviceAuthorizationRequest;
+use authorization::res_req::DeviceAuthorizationResponse;
+use authorization::res_req::ErrorResponse;
+use authorization::res_req::ErrorResponseKind;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -55,15 +14,16 @@ async fn main() -> Result<()> {
     println!("body = {:?}", body);
 
     // client_id=1406020730&scope=example_scope
-    let client_id = 0.to_string();
+    let client_id = 0;
     let client = reqwest::Client::new();
-    let mut params = HashMap::new();
-    params.insert("client_id", client_id.to_string());
-    params.insert("scope", "suco".to_string());
+    let device_authorization_request = dbg!(DeviceAuthorizationRequest {
+        client_id: client_id.to_string(),
+        scope: "suco".to_owned()
+    });
 
     let device_authorization_response = client
         .post(format!("{authorization_server}/device_authorization"))
-        .form(&params)
+        .form(&device_authorization_request)
         .send()
         .await?
         .json::<DeviceAuthorizationResponse>()
@@ -72,13 +32,13 @@ async fn main() -> Result<()> {
 
     // polling fetch token
     let access_token_response = loop {
-        let request = dbg!(AccessTokenRequest::DeviceCode {
+        let access_token_request = dbg!(AccessTokenRequest::DeviceCode {
             device_code: device_authorization_response.device_code.clone(),
-            client_id: client_id.to_owned()
+            client_id: client_id.to_string()
         });
         let result = client
             .post(format!("{authorization_server}/token"))
-            .form(&request)
+            .form(&access_token_request)
             .send()
             .await;
         break match result {
@@ -98,7 +58,7 @@ async fn main() -> Result<()> {
                             continue;
                         }
                         ErrorResponseKind::Others => {
-                            return anyhow::bail!("error");
+                            anyhow::bail!("error");
                         }
                     }
                 }
@@ -106,7 +66,7 @@ async fn main() -> Result<()> {
             }
             Err(error) => {
                 dbg!(error);
-                return anyhow::bail!("error");
+                anyhow::bail!("error");
             }
         };
     };

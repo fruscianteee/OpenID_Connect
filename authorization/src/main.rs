@@ -1,28 +1,14 @@
 use std::env;
 
-use askama::Template;
 use askama_axum::IntoResponse;
-use axum::http::Response;
 use axum::routing::{get, post};
-use axum::{extract::Form, response::Html, Router};
-use serde::{Deserialize, Serialize};
+use axum::{extract::Form, Router};
+use res_req::{AccessTokenRequest, DeviceAuthorizationRequest, LoginForm};
 use tracing::instrument;
 
-#[derive(Debug, Serialize, Default)]
-struct DeviceAuthorizationResponse {
-    device_code: String,
-    user_code: String,
-    verification_uri: String,
-    verification_uri_complete: String,
-    expires_in: u32,
-    interval: u32,
-}
+use crate::res_req::{AccessTokenResponse, DeviceAuthorizationResponse, LoginResponse};
 
-#[derive(Debug, Deserialize, Default)]
-struct DeviceAuthorizationRequest {
-    client_id: u64,
-    scope: String,
-}
+mod res_req;
 
 #[tokio::main]
 async fn main() {
@@ -62,24 +48,9 @@ async fn accept_form(
     };
     axum::Json(body)
 }
-
-#[derive(Template, Debug, Default, Deserialize, Serialize)]
-#[template(path = "index.html")]
-struct LoginForm {
-    user_id: String,
-    password: String,
-    user_code: String,
-}
 #[instrument(ret)]
 async fn login() -> impl IntoResponse {
     LoginForm::default()
-}
-
-#[derive(Template, Debug, Serialize)]
-#[template(path = "response.html")] // もしあなたが結果を表示するための別のテンプレートを持っているなら、そのパスを指定してください。
-struct LoginResponse {
-    result_msg: String,
-    user: LoginForm,
 }
 
 #[instrument(ret)]
@@ -90,25 +61,6 @@ async fn submit(Form(input): Form<LoginForm>) -> impl IntoResponse {
         user: input,
         result_msg: "認証OK !!!!!".to_owned(),
     }
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(tag = "grant_code")]
-enum AccessTokenRequest {
-    #[serde(rename = "urn:ietf:params:oauth:grant-type:device_code")]
-    DeviceCode {
-        device_code: String,
-        client_id: String,
-    },
-}
-
-#[derive(Debug, Serialize, Default)]
-struct AccessTokenResponse {
-    access_token: String,
-    token_type: String,
-    expires_in: Option<u32>,
-    refresh_token: Option<String>,
-    example_parameter: Option<String>,
 }
 
 #[instrument(ret)]
