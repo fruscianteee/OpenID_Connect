@@ -5,6 +5,7 @@ use authorization::res_req::DeviceAuthorizationRequest;
 use authorization::res_req::DeviceAuthorizationResponse;
 use authorization::res_req::ErrorResponse;
 use authorization::res_req::ErrorResponseKind;
+use rand::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -14,7 +15,12 @@ async fn main() -> Result<()> {
     println!("body = {:?}", body);
 
     // client_id=1406020730&scope=example_scope
-    let client_id = 0;
+    let client_id = {
+        let mut rng = rand::thread_rng();
+        let random_bytes = rng.gen();
+
+        uuid::Builder::from_random_bytes(random_bytes).into_uuid()
+    };
     let client = reqwest::Client::new();
     let device_authorization_request = dbg!(DeviceAuthorizationRequest {
         client_id: client_id.to_string(),
@@ -28,7 +34,10 @@ async fn main() -> Result<()> {
         .await?
         .json::<DeviceAuthorizationResponse>()
         .await?;
-    dbg!(&device_authorization_response);
+    println!(
+        "Open authorization link: {}",
+        device_authorization_response.verification_uri_complete
+    );
 
     // polling fetch token
     let access_token_response = loop {

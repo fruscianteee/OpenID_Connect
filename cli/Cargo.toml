@@ -19,3 +19,5 @@ serde = { workspace = true }
 # decode form data
 serde_urlencoded = "0.7"
 authorization = { path = "../authorization" }
+uuid = { workspace = true }
+rand = { workspace = true }
