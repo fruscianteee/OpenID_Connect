@@ -4,7 +4,6 @@ use askama::Template;
 use askama_axum::IntoResponse;
 use axum::http::Response;
 use axum::routing::{get, post};
-use axum::Json;
 use axum::{extract::Form, response::Html, Router};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
@@ -37,7 +36,8 @@ async fn main() {
     let app = Router::new()
         .route("/", get(|| async { "Hello, World!" }))
         .route("/device_authorization", post(accept_form))
-        .route("/device", get(login).post(submit));
+        .route("/device", get(login).post(submit))
+        .route("/token", post(token));
 
     // run it with hyper on localhost:3000
     axum::Server::bind(&"127.0.0.1:3000".parse().unwrap())
@@ -49,7 +49,7 @@ async fn main() {
 #[instrument(ret)]
 async fn accept_form(
     Form(input): Form<DeviceAuthorizationRequest>,
-) -> Json<DeviceAuthorizationResponse> {
+) -> axum::Json<DeviceAuthorizationResponse> {
     let uri = "http://localhost/device";
     let user_code = "WDJB-MJHT";
     let body = DeviceAuthorizationResponse {
@@ -90,4 +90,30 @@ async fn submit(Form(input): Form<LoginForm>) -> impl IntoResponse {
         user: input,
         result_msg: "認証OK !!!!!".to_owned(),
     }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "grant_code")]
+enum AccessTokenRequest {
+    #[serde(rename = "urn:ietf:params:oauth:grant-type:device_code")]
+    DeviceCode {
+        device_code: String,
+        client_id: String,
+    },
+}
+
+#[derive(Debug, Serialize, Default)]
+struct AccessTokenResponse {
+    access_token: String,
+    token_type: String,
+    expires_in: Option<u32>,
+    refresh_token: Option<String>,
+    example_parameter: Option<String>,
+}
+
+#[instrument(ret)]
+async fn token(Form(input): Form<AccessTokenRequest>) -> impl IntoResponse {
+    dbg!(&input);
+    // instantiate your struct
+    axum::Json(AccessTokenResponse::default())
 }

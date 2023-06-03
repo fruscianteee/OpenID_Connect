@@ -12,7 +12,7 @@ async-trait = { workspace = true }
 pretty_assertions = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-axum = { version = "0.6.18", features = ["form"] }
+axum = { version = "0.6.18", features = ["form", "macros"] }
 anyhow = { workspace = true }
 serde = { workspace = true }
 askama = { version = "0.12.0", features = ["with-axum"] }
