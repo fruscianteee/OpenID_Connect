@@ -85,10 +85,9 @@ struct LoginResponse {
 #[instrument(ret)]
 async fn submit(Form(input): Form<LoginForm>) -> impl IntoResponse {
     dbg!(&input);
-    let hello = LoginResponse {
+    // instantiate your struct
+    LoginResponse {
         user: input,
         result_msg: "認証OK !!!!!".to_owned(),
-    }; // instantiate your struct
-    println!("{}", hello.render().unwrap());
-    // axum::Json(body)
+    }
 }
